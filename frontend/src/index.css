@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 142 71% 29%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 82 84% 34%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 141 79% 95%;
+    --accent-foreground: 142 71% 22%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 142 71% 29%;
+    --chart-1: 142 71% 29%;
+    --chart-2: 82 84% 34%;
+    --chart-3: 158 64% 52%;
+    --chart-4: 74 78% 55%;
+    --chart-5: 158 90% 15%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: #f8fafc;
+    color: #0f172a;
+    font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, h4, h5, h6, .font-poppins {
+    font-family: "Poppins", system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .agri-card {
+    @apply bg-white rounded-[24px] shadow-card border border-slate-100/50;
+  }
+  .agri-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#15803D] to-[#65A30D] text-white rounded-xl px-5 py-2.5 font-medium shadow-button hover:shadow-button-hover transition-all duration-200 active:scale-[0.97] font-poppins;
+  }
+  .agri-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 bg-white text-slate-700 border border-slate-200 rounded-xl px-5 py-2.5 font-medium hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-[0.97];
+  }
+  .agri-btn-ghost {
+    @apply inline-flex items-center gap-2 text-slate-600 hover:text-[#15803D] hover:bg-green-50 rounded-xl px-3 py-2 transition-colors;
+  }
+  .agri-input {
+    @apply w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#65A30D]/25 focus:border-[#65A30D] focus:bg-white transition-all;
+  }
+  .agri-label {
+    @apply block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5;
+  }
+  .agri-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  .agri-th {
+    @apply px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500;
+  }
+  .agri-td {
+    @apply px-4 py-3 text-sm text-slate-700;
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+}
+
+/* Recharts polish */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  border-radius: 12px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.08) !important;
+}
