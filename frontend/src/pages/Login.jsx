@@ -196,10 +196,21 @@ export default function Login() {
               {loading ? "Signing in..." : (<><LogIn className="w-4 h-4" /> Login Securely</>)}
             </button>
 
-            <div className="flex items-center gap-2 my-2 text-xs text-slate-400 uppercase tracking-wider">
-              <div className="flex-1 h-px bg-slate-200" />
-              <span>Secure Access</span>
-              <div className="flex-1 h-px bg-slate-200" />
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800 space-y-1">
+              <div className="font-semibold flex items-center justify-between">
+                <span>🔑 Default Login Credentials:</span>
+                <button
+                  type="button"
+                  onClick={() => setForm({ username: "admin", password: "admin123" })}
+                  className="text-agri-primary font-bold underline hover:text-green-800"
+                >
+                  Auto-fill
+                </button>
+              </div>
+              <div className="flex gap-4 text-emerald-700">
+                <span>Username: <strong className="font-mono">admin</strong></span>
+                <span>Password: <strong className="font-mono">admin123</strong></span>
+              </div>
             </div>
 
             <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
