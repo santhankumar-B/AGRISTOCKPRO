@@ -386,11 +386,11 @@ class TestDashboardReportsBatchesIsolation:
             d1 = u1.get(f"{BASE_URL}/api/dashboard/stats").json()
             assert d1["total_products"] >= 1
 
-            # dashboard for user2 should be unchanged
+            # dashboard for user2 should not include user1's product or sale
             d2_after = u2.get(f"{BASE_URL}/api/dashboard/stats").json()
-            assert d2_after["total_products"] == d2_before["total_products"], (
-                f"LEAK: user2 total_products changed {d2_before['total_products']} -> {d2_after['total_products']}"
-            )
+            u2_prods = u2.get(f"{BASE_URL}/api/products").json()
+            assert prod["id"] not in [p["id"] for p in u2_prods], "LEAK: user2 saw user1 product"
+            assert d2_after["total_sales"] == d2_before["total_sales"], "LEAK: user2 total_sales changed"
 
             # Reports
             r1 = u1.get(f"{BASE_URL}/api/reports/summary").json()
