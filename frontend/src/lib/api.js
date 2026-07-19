@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:8000";
+const host = typeof window !== "undefined" && window.location.hostname ? window.location.hostname : "127.0.0.1";
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || `http://${host}:8000`;
 export const API = `${BACKEND_URL}/api`;
 
 const api = axios.create({
