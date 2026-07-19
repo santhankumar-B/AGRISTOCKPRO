@@ -59,11 +59,8 @@ async def lifespan(app: FastAPI):
                 (uid(), uname, "", "staff", hash_password(staff_password), now_iso())
             )
 
-    try:
-        from seed_data import seed_data
-        await seed_data()
-    except Exception as e:
-        print("Seed data error:", e)
+    # Sample data seeding disabled for clean database
+    pass
 
     yield
 
