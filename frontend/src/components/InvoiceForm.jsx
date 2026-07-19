@@ -39,7 +39,7 @@ export default function InvoiceForm({ mode = "purchase" }) {
     notes: "",
     items: [],
     discount_amount: 0,
-    tax_default: 0,
+    tax_default: isPurchase ? 5 : 0,
     received_amount: 0,
   }));
 
@@ -68,13 +68,13 @@ export default function InvoiceForm({ mode = "purchase" }) {
           notes: d.notes || "",
           items: d.items || [],
           discount_amount: d.discount || 0,
-          tax_default: 0,
+          tax_default: isPurchase ? 5 : 0,
           received_amount: isPurchase ? (d.paid_amount || 0) : (d.received_amount || 0),
         });
       });
     } else {
       api.get("/meta/next-invoice", { params: { kind: isPurchase ? "purchase" : "sale" } })
-        .then((r) => setInvoice((v) => ({ ...v, invoice_number: r.data.number })));
+        .then((r) => setInvoice((v) => ({ ...v, invoice_number: r.data.number, tax_default: isPurchase ? 5 : 0 })));
     }
   }, [isPurchase, id]);
 
@@ -104,7 +104,7 @@ export default function InvoiceForm({ mode = "purchase" }) {
         qty: 1,
         unit_price: isPurchase ? Number(p.purchase_price || 0) : Number(p.selling_price || 0),
         discount_percent: 0,
-        tax_percent: typeof v.tax_default === "number" ? v.tax_default : 0,
+        tax_percent: typeof v.tax_default === "number" ? v.tax_default : (isPurchase ? 5 : 0),
         amount: 0,
       }],
     }));
