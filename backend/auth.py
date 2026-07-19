@@ -36,25 +36,23 @@ def decode_token(token: str) -> dict:
     return jwt.decode(token, get_jwt_secret(), algorithms=[JWT_ALGORITHM])
 
 
-async def get_current_user_from_request(request: Request, db) -> dict:
-    token = request.cookies.get("access_token")
+async def get_current_user_from_request(request: Request) -> dict:
+    from database import fetch_one
+    token = request.cookies.get("agri_token") or request.cookies.get("access_token")
     if not token:
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             token = auth_header[7:]
     if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+        return None
     try:
         payload = decode_token(token)
         if payload.get("type") != "access":
-            raise HTTPException(status_code=401, detail="Invalid token type")
-        user = await db.users.find_one({"id": payload["sub"]})
+            return None
+        user = await fetch_one("SELECT * FROM users WHERE id = ?", (payload["sub"],))
         if not user:
-            raise HTTPException(status_code=401, detail="User not found")
+            return None
         user.pop("password_hash", None)
-        user.pop("_id", None)
         return user
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        return None

@@ -1,0 +1,237 @@
+{
+  "theme_details": {
+    "mode": "light",
+    "description": "Agriculture Inventory ERP targeting enterprise farm managers and retailers. Earthy, professional, and trustworthy.",
+    "archetype": "Organic & Earthy (Customized for SaaS)"
+  },
+  "typography": {
+    "fonts": {
+      "heading": "Poppins",
+      "body": "DM Sans",
+      "mono": "JetBrains Mono"
+    },
+    "scale": {
+      "h1": "text-4xl sm:text-5xl font-bold tracking-tight text-slate-900",
+      "h2": "text-2xl sm:text-3xl font-semibold tracking-tight text-slate-800",
+      "h3": "text-xl sm:text-2xl font-medium tracking-tight text-slate-800",
+      "h4": "text-lg sm:text-xl font-medium text-slate-700",
+      "body": "text-base text-slate-600 leading-relaxed",
+      "small": "text-sm text-slate-500",
+      "tiny": "text-xs font-semibold uppercase tracking-wider text-slate-400"
+    },
+    "installation": "Add Google Fonts links for Poppins and DM Sans in index.html"
+  },
+  "colors": {
+    "primary": {
+      "DEFAULT": "#15803D",
+      "light": "#16A34A",
+      "dark": "#166534",
+      "foreground": "#FFFFFF"
+    },
+    "secondary": {
+      "DEFAULT": "#65A30D",
+      "light": "#84CC16",
+      "dark": "#4D7C0F",
+      "foreground": "#FFFFFF"
+    },
+    "sidebar": {
+      "bg": "#0F3D1F",
+      "text": "#E2E8F0",
+      "hover": "rgba(255, 255, 255, 0.1)",
+      "active": "#15803D"
+    },
+    "background": "#F8FAFC",
+    "surface": "#FFFFFF",
+    "border": "#E2E8F0",
+    "text": {
+      "main": "#0F172A",
+      "muted": "#64748B",
+      "inverse": "#FFFFFF"
+    },
+    "status": {
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "danger": "#EF4444",
+      "info": "#3B82F6"
+    },
+    "charts": [
+      "#15803D",
+      "#65A30D",
+      "#34D399",
+      "#A3E635",
+      "#064E3B",
+      "#FDE047"
+    ]
+  },
+  "visual_enhancers": {
+    "shadows": {
+      "card": "shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
+      "dropdown": "shadow-[0_10px_40px_rgb(0,0,0,0.08)]",
+      "button": "shadow-[0_4px_14px_rgba(21,128,61,0.25)]",
+      "button_hover": "shadow-[0_6px_20px_rgba(21,128,61,0.35)]"
+    },
+    "radii": {
+      "card": "rounded-[24px]",
+      "button": "rounded-xl",
+      "input": "rounded-xl",
+      "badge": "rounded-full"
+    },
+    "glassmorphism": {
+      "login_panel": "bg-white/80 backdrop-blur-2xl border border-white/40",
+      "marketing_cards": "bg-black/20 backdrop-blur-md border border-white/10 text-white",
+      "header_sticky": "bg-[#F8FAFC]/80 backdrop-blur-xl border-b border-slate-200/50"
+    },
+    "gradients": {
+      "button": "bg-gradient-to-r from-[#15803D] to-[#65A30D]",
+      "hero_overlay": "bg-gradient-to-t from-[#0F3D1F]/95 via-[#0F3D1F]/60 to-transparent",
+      "marketing_overlay": "bg-gradient-to-br from-white/10 to-transparent"
+    }
+  },
+  "component_specs": {
+    "card": {
+      "base": "bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/50",
+      "padding": "p-6 sm:p-8",
+      "header": "flex justify-between items-center mb-6"
+    },
+    "button": {
+      "primary": "bg-gradient-to-r from-[#15803D] to-[#65A30D] text-white rounded-xl px-6 py-2.5 font-medium shadow-[0_4px_14px_rgba(21,128,61,0.25)] hover:shadow-[0_6px_20px_rgba(21,128,61,0.35)] transition-all duration-200 active:scale-95 flex items-center justify-center gap-2",
+      "secondary": "bg-white text-slate-700 border border-slate-200 rounded-xl px-6 py-2.5 font-medium hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95",
+      "ghost": "text-slate-600 hover:text-primary hover:bg-green-50 rounded-xl px-4 py-2 transition-colors"
+    },
+    "input": {
+      "base": "w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#65A30D]/20 focus:border-[#65A30D] transition-all",
+      "label": "block text-sm font-medium text-slate-700 mb-1.5"
+    },
+    "table": {
+      "container": "w-full overflow-x-auto rounded-xl border border-slate-200 bg-white",
+      "header": "bg-slate-50 text-slate-600 text-xs uppercase tracking-wider font-semibold border-b border-slate-200",
+      "th": "px-6 py-4 text-left",
+      "row": "border-b border-slate-100 hover:bg-slate-50/50 transition-colors group",
+      "td": "px-6 py-4 text-sm text-slate-700 whitespace-nowrap",
+      "action_cell": "flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity"
+    },
+    "sidebar": {
+      "container": "w-[280px] bg-[#0F3D1F] h-screen fixed top-0 left-0 flex flex-col text-white z-40",
+      "logo_area": "h-20 flex items-center px-6 border-b border-white/10",
+      "nav_link": "flex items-center gap-3 px-4 py-3 mx-4 my-1 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all font-medium text-sm",
+      "nav_link_active": "flex items-center gap-3 px-4 py-3 mx-4 my-1 rounded-xl bg-gradient-to-r from-[#15803D] to-[#65A30D] text-white shadow-lg font-medium text-sm"
+    }
+  },
+  "layouts": {
+    "login": {
+      "structure": "Split-screen layout (lg:grid-cols-2 min-h-screen).",
+      "left_panel": "Relative container with hero image covering 100% height. Heavy gradient overlay `#0F3D1F` from bottom. Content: Branding, Tagline ('Smart Inventory. Better Farming. Stronger Future.'), and 3 Glassmorphism Feature Cards stacked with stagger animations.",
+      "right_panel": "Background `#F8FAFC`. Centered Glassmorphism Login Card (max-w-md, rounded-3xl, shadow-2xl). Form: Username, Password, Remember Me, Forgot Password, Login Button, Google OAuth Button.",
+      "effects": "Floating leaf animations on the left panel using Framer Motion."
+    },
+    "dashboard": {
+      "structure": "Sidebar + Main Content area. Main content has top nav (sticky) and scrollable body. Background `#F8FAFC`.",
+      "top_nav": "Sticky header, blurred background, Search bar, Notifications icon, Profile dropdown.",
+      "kpi_grid": "Grid of 4 Stat Cards (Total Products, Today's Sales, Today's Purchases, Low Stock). Use 'Tetris' grid logic. Each card has an icon with a soft green background.",
+      "charts_area": "Main Area Chart spanning 2 columns, Top Selling list in 1 column.",
+      "tables_area": "Recent Sales & Purchases side-by-side or stacked."
+    },
+    "forms_invoicing": {
+      "structure": "Two-column or multi-section layout for Purchase/Sales Entry. Container max-width: xl.",
+      "header_section": "Supplier/Customer selection, Date, Invoice No. (Grid 3 cols).",
+      "line_items": "Full-width complex table. Columns: Product (Dropdown), Batch, Expiry, Qty, Unit Price, Tax, Total, Action (Remove). Below table: '+ Add Product' dashed button.",
+      "summary_section": "Right-aligned panel showing Subtotal, Tax Calculation, Discount, and Grand Total. Prominent 'Save \u0026 Issue' primary button."
+    }
+  },
+  "motion": {
+    "page_transition": {
+      "initial": { "opacity": 0, "y": 15 },
+      "animate": { "opacity": 1, "y": 0 },
+      "exit": { "opacity": 0, "y": -15 },
+      "transition": { "duration": 0.4, "ease": "easeOut" }
+    },
+    "stagger_list": {
+      "container": { "hidden": { "opacity": 0 }, "show": { "opacity": 1, "transition": { "staggerChildren": 0.1 } } },
+      "item": { "hidden": { "opacity": 0, "y": 10 }, "show": { "opacity": 1, "y": 0 } }
+    },
+    "hover_card": {
+      "whileHover": { "y": -4, "transition": { "duration": 0.2 } }
+    },
+    "floating_leaves": "Use Framer Motion to animate SVG leaves. randomize initial y, x, rotation. animate y: ['-10%', '110%'], rotate: [0, 360], x: slightly oscillating. Repeat infinity, duration 10-20s."
+  },
+  "accessibility": {
+    "contrast": "Ensure white text on #15803D passes AA standards (it does, ratio is high). Form inputs must have visible focus rings (#65A30D/20).",
+    "aria": "Use aria-labels for icon-only buttons (e.g., trash icon in line items). Use role='region' for main sections.",
+    "testing": "All interactive elements MUST have `data-testid` attributes (e.g., `data-testid='login-submit-button'`, `data-testid='add-line-item'`).",
+    "empty_transparent": "Never use fully transparent backgrounds on dropdowns or sticky headers. Always apply background color with blur."
+  },
+  "media": {
+    "hero_login": {
+      "url": "https://images.unsplash.com/uploads/141247613151541c06062/c15fb37d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzV8MHwxfHNlYXJjaHw0fHxhZ3JpY3VsdHVyZSUyMGZhcm0lMjBsYW5kc2NhcGUlMjBzdW5yaXNlfGVufDB8fHx8MTc4MzU3MzkwN3ww&ixlib=rb-4.1.0&q=85",
+      "description": "Sunrise corn field landscape for left split-screen",
+      "category": "backgrounds"
+    },
+    "product_placeholders": [
+      {
+        "type": "fertilizer",
+        "url": "https://images.unsplash.com/photo-1566378577671-2375b0a1d4ca?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA4Mzl8MHwxfHNlYXJjaHw0fHxmZXJ0aWxpemVyJTIwc2FjayUyMHByb2R1Y3R8ZW58MHx8fHwxNzgzNTczOTIyfDA&ixlib=rb-4.1.0&q=85",
+        "description": "White fertilizer sacks lot"
+      },
+      {
+        "type": "seeds",
+        "url": "https://images.unsplash.com/photo-1777620843343-851c08e1a336?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHw0fHxzZWVkcyUyMHBhY2tldHMlMjBmYXJtaW5nfGVufDB8fHx8MTc4MzU3MzkwN3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Vintage seed packets on shelf"
+      },
+      {
+        "type": "pesticide",
+        "url": "https://images.pexels.com/photos/4975345/pexels-photo-4975345.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Yellow pesticide spray bottle"
+      }
+    ],
+    "decorations": [
+      {
+        "type": "leaf_svg",
+        "description": "Use Lucide React 'Leaf' icon or custom SVG paths for floating leaf particles. Color them in lime and deep green with variable opacity (10%-40%)."
+      }
+    ]
+  },
+  "3d_libraries": {
+    "charts": "recharts (Use AreaChart for Sales Overview, BarChart for Monthly comparisons. Apply custom tooltip with rounded corners and chart color palette.)",
+    "motion": "framer-motion (For route transitions, micro-interactions, and floating leaf hero effect.)",
+    "icons": "lucide-react (Consistent, clean stroke icons mapping well to enterprise SaaS.)"
+  },
+  "empty_states_and_loaders": {
+    "empty_state": {
+      "container": "flex flex-col items-center justify-center p-12 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200",
+      "icon": "h-16 w-16 text-slate-300 mb-4",
+      "heading": "text-lg font-medium text-slate-800 mb-2 font-poppins",
+      "subtext": "text-sm text-slate-500 mb-6 max-w-sm",
+      "action": "Render primary button to add new record."
+    },
+    "skeleton": {
+      "base": "animate-pulse bg-slate-200 rounded",
+      "card": "h-32 w-full rounded-[24px]",
+      "table_row": "h-12 w-full mb-2"
+    },
+    "error_state": {
+      "container": "p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3",
+      "text": "text-sm text-red-700 font-medium"
+    }
+  },
+  "instructions_to_main_agent": [
+    "CRITICAL: Adhere to the provided Tailwind CSS variables and styling classes.",
+    "Use `.js` and `.jsx` extensions. Do NOT use TypeScript (`.tsx`, `.ts`).",
+    "Do NOT use Inter for any typography. Implement Google Fonts: Poppins (Headings) and DM Sans (Body). Apply `font-poppins` and `font-dmsans` correctly in tailwind config.",
+    "Implement the floating leaf effect on the login page using Framer Motion.",
+    "Make sure Cards have `rounded-[24px]` and the specific soft shadow provided in the specs.",
+    "Ensure all interactive elements have `data-testid` attributes as specified.",
+    "Avoid fully transparent backgrounds on overlays (modals, dropdowns) - always use a solid color or backdrop-blur.",
+    "For tables, follow the specific padding and border-bottom styling to keep it clean and readable.",
+    "Never center text universally; align left for paragraphs/tables and center only for hero text or empty states.",
+    "Use Lucide-React for all icons, maintaining a consistent stroke width."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "You tend to converge toward generic outputs. Avoid the 'AI slop' aesthetic. Implement the custom shadows, large border radii, and gradient buttons perfectly.",
+    "DO NOT apply universal transition (e.g., `transition: all` on body). Attach transitions to specific classes (e.g., buttons, inputs).",
+    "DO NOT center align the app container. No `.App { text-align: center; }`.",
+    "NEVER use placeholder URLs (via.placeholder.com). Use the URLs provided in the `media` section.",
+    "Every interaction needs micro-animations (hover states, focus rings, scale on active). Static = dead.",
+    "Use generous spacing (Tailwind p-6, p-8) for cards. Cramped designs look cheap.",
+    "If toasts are needed, use `sonner`."
+  ]
+}
