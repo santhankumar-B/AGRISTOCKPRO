@@ -58,6 +58,13 @@ async def lifespan(app: FastAPI):
                 "INSERT INTO users (id, username, name, role, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?)",
                 (uid(), uname, "", "staff", hash_password(staff_password), now_iso())
             )
+
+    try:
+        from seed_data import seed_data
+        await seed_data()
+    except Exception as e:
+        print("Seed data error:", e)
+
     yield
 
 
