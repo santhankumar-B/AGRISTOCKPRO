@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 import api, { fmtCurrency, todayISO } from "@/lib/api";
 import { useNavigate, useParams } from "react-router-dom";
-import { Plus, Trash2, Search, Save, X, ClipboardList, ReceiptText, ChevronDown, UserPlus } from "lucide-react";
+import { Plus, Trash2, Search, Save, X, ClipboardList, ReceiptText, ChevronDown, UserPlus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import InvoiceScannerModal from "@/components/InvoiceScannerModal";
 
 /**
  * Reusable Invoice Form for Purchase & Sale
@@ -19,6 +20,7 @@ export default function InvoiceForm({ mode = "purchase" }) {
   const [productSearch, setProductSearch] = useState("");
   const [showProductList, setShowProductList] = useState(false);
   const [showPartyList, setShowPartyList] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
 
   const [invoice, setInvoice] = useState(() => ({
     party_id: "",
@@ -219,9 +221,20 @@ export default function InvoiceForm({ mode = "purchase" }) {
         <div className="space-y-6">
           {/* Header */}
           <div className="agri-card p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <ClipboardList className="w-5 h-5 text-agri-primary" />
-              <h3 className="font-poppins font-semibold text-lg text-slate-900">{isPurchase ? "Purchase" : "Customer & Invoice"} Details</h3>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 text-agri-primary" />
+                <h3 className="font-poppins font-semibold text-lg text-slate-900">{isPurchase ? "Purchase" : "Customer & Invoice"} Details</h3>
+              </div>
+              {isPurchase && !id && (
+                <button
+                  type="button"
+                  onClick={() => setShowScanner(true)}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-lime-300" /> 📸 Auto-Fill from Paper Photo (AI)
+                </button>
+              )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
               <div className="md:col-span-2 relative">
@@ -454,6 +467,7 @@ export default function InvoiceForm({ mode = "purchase" }) {
           </div>
         </div>
       </div>
+      <InvoiceScannerModal isOpen={showScanner} onClose={() => setShowScanner(false)} onSuccess={() => navigate("/purchase")} />
     </>
   );
 }

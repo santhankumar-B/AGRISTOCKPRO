@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import api, { fmtCurrency, fmtDate } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
-import { Plus, Trash2, Truck, Search, Pencil } from "lucide-react";
+import { Plus, Trash2, Truck, Search, Pencil, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import InvoiceScannerModal from "@/components/InvoiceScannerModal";
 
 export default function Purchase() {
   const [rows, setRows] = useState([]);
   const [q, setQ] = useState("");
+  const [showScanner, setShowScanner] = useState(false);
   const navigate = useNavigate();
 
   const load = () => api.get("/purchases", { params: { q } }).then((r) => setRows(r.data));
@@ -29,6 +31,13 @@ export default function Purchase() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input className="agri-input pl-10" placeholder="Search invoice or supplier..." value={q} onChange={(e) => setQ(e.target.value)} data-testid="purchase-search" />
           </div>
+          <button
+            type="button"
+            className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition-colors"
+            onClick={() => setShowScanner(true)}
+          >
+            <Sparkles className="w-4 h-4 text-lime-300" /> 📸 Scan Paper Invoice (AI)
+          </button>
           <button className="agri-btn-primary" onClick={() => navigate("/purchase/new")} data-testid="btn-new-purchase"><Plus className="w-4 h-4" /> New Purchase</button>
         </div>
 
@@ -82,6 +91,7 @@ export default function Purchase() {
           </table>
         </div>
       </div>
+      <InvoiceScannerModal isOpen={showScanner} onClose={() => setShowScanner(false)} onSuccess={load} />
     </>
   );
 }
