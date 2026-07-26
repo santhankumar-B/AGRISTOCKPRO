@@ -42,22 +42,41 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
     }
   };
 
+  const recalculateTotals = (items, discount = 0, cgst = 0, sgst = 0) => {
+    const subtotal = items.reduce((sum, item) => sum + (Number(item.qty || 0) * Number(item.unit_price || 0)), 0);
+    const taxTotal = (Number(cgst || 0) + Number(sgst || 0));
+    const total = Math.max(0, subtotal + taxTotal - Number(discount || 0));
+    return { subtotal, total };
+  };
+
   const updateExtractedField = (field, val) => {
-    setExtracted((v) => ({ ...v, [field]: val }));
+    setExtracted((v) => {
+      const updated = { ...v, [field]: val };
+      if (field === "discount" || field === "cgst" || field === "sgst") {
+        const { subtotal, total } = recalculateTotals(updated.items, updated.discount, updated.cgst, updated.sgst);
+        updated.subtotal = subtotal;
+        updated.total = total;
+      }
+      return updated;
+    });
   };
 
   const updateItemField = (idx, field, val) => {
     setExtracted((v) => {
       const items = [...v.items];
-      items[idx] = { ...items[idx], [field]: val };
-      return { ...v, items };
+      const item = { ...items[idx], [field]: val };
+      if (field === "qty" || field === "unit_price") {
+        item.amount = Number(item.qty || 0) * Number(item.unit_price || 0);
+      }
+      items[idx] = item;
+      const { subtotal, total } = recalculateTotals(items, v.discount, v.cgst, v.sgst);
+      return { ...v, items, subtotal, total };
     });
   };
 
   const addItem = () => {
-    setExtracted((v) => ({
-      ...v,
-      items: [
+    setExtracted((v) => {
+      const items = [
         ...v.items,
         {
           product_name: "New Product",
@@ -71,15 +90,25 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
           tax_percent: 5,
           amount: 0,
         },
-      ],
-    }));
+      ];
+      const { subtotal, total } = recalculateTotals(items, v.discount, v.cgst, v.sgst);
+      return { ...v, items, subtotal, total };
+    });
   };
 
   const removeItem = (idx) => {
-    setExtracted((v) => ({
-      ...v,
-      items: v.items.filter((_, i) => i !== idx),
-    }));
+    setExtracted((v) => {
+      const items = v.items.filter((_, i) => i !== idx);
+      const { subtotal, total } = recalculateTotals(items, v.discount, v.cgst, v.sgst);
+      return { ...v, items, subtotal, total };
+    });
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && extracted && !saving) {
+      e.preventDefault();
+      handleSavePurchase();
+    }
   };
 
   const handleSavePurchase = async () => {
@@ -135,7 +164,7 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
         });
       }
 
-      // 3. Post Purchase Entry
+      // 3. Post Purchase Entry directly to purchase database
       const payload = {
         supplier_id: supplier_id || "",
         supplier_name: extracted.supplier_name || "Unknown Supplier",
@@ -159,7 +188,7 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
       };
 
       await api.post("/purchases", payload);
-      toast.success("Purchase entry & products added successfully!");
+      toast.success("Purchase entry saved directly into database!");
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
@@ -177,6 +206,7 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
           className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
+          onKeyDown={handleKeyDown}
         >
           {/* Header */}
           <div className="p-6 bg-gradient-to-r from-[#0F3D1F] to-[#15803D] text-white flex items-center justify-between shrink-0">
@@ -185,8 +215,8 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
                 <Sparkles className="w-5 h-5 text-lime-300" />
               </div>
               <div>
-                <h2 className="font-poppins font-bold text-xl">AI Paper Invoice Scanner</h2>
-                <p className="text-xs text-white/80">Upload a paper invoice photo to auto-extract and add purchases</p>
+                <h2 className="font-poppins font-bold text-xl">Automated Invoice Scanning & Expense Tracking</h2>
+                <p className="text-xs text-white/80">Upload bill photo/PDF -> Review extracted fields -> Press Enter to Confirm & Save</p>
               </div>
             </div>
             <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors">
@@ -215,8 +245,8 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
                       <div className="w-14 h-14 rounded-2xl bg-green-100 text-green-700 flex items-center justify-center mb-3">
                         <Camera className="w-7 h-7" />
                       </div>
-                      <h3 className="font-poppins font-semibold text-slate-800 text-base">Upload or Drop Invoice Paper Photo</h3>
-                      <p className="text-xs text-slate-500 mt-1 max-w-sm">Supports JPG, PNG, WEBP images or scanned PDF bills</p>
+                      <h3 className="font-poppins font-semibold text-slate-800 text-base">Upload or Scan Invoice / Purchase Bill</h3>
+                      <p className="text-xs text-slate-500 mt-1 max-w-sm">Supports JPG, PNG, WEBP images or scanned PDF purchase bills</p>
                     </>
                   )}
                 </div>
@@ -233,11 +263,11 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
                   >
                     {scanning ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin" /> Analyzing Invoice AI...
+                        <Loader2 className="w-4 h-4 animate-spin" /> Scanning & Parsing Invoice...
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-4 h-4 text-lime-300" /> Extract Details Now
+                        <Sparkles className="w-4 h-4 text-lime-300" /> Extract Invoice Data Now
                       </>
                     )}
                   </button>
@@ -249,29 +279,23 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
                 <div className="bg-lime-50 border border-lime-200 rounded-2xl p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Check className="w-5 h-5 text-green-600" />
-                    <span className="text-sm font-medium text-slate-800">Invoice Details Extracted Successfully! Review & edit below:</span>
+                    <span className="text-sm font-medium text-slate-800">
+                      Data Extracted! Review/edit below. Press <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded text-xs font-mono font-bold text-slate-700 shadow-sm">Enter ↵</kbd> or click button to save to purchase list.
+                    </span>
                   </div>
                   <button type="button" onClick={() => setExtracted(null)} className="text-xs text-slate-500 hover:text-slate-700 underline">
-                    Re-scan Another Photo
+                    Re-scan Another Bill
                   </button>
                 </div>
 
                 {/* Supplier & Invoice Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
                   <div>
-                    <label className="agri-label">Supplier Name</label>
+                    <label className="agri-label">Vendor / Seller Name</label>
                     <input
                       className="agri-input text-sm"
                       value={extracted.supplier_name || ""}
                       onChange={(e) => updateExtractedField("supplier_name", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="agri-label">Supplier GSTIN</label>
-                    <input
-                      className="agri-input text-sm font-mono"
-                      value={extracted.supplier_gst || ""}
-                      onChange={(e) => updateExtractedField("supplier_gst", e.target.value)}
                     />
                   </div>
                   <div>
@@ -282,9 +306,18 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
                       onChange={(e) => updateExtractedField("invoice_number", e.target.value)}
                     />
                   </div>
+                  <div>
+                    <label className="agri-label">Invoice Date</label>
+                    <input
+                      type="date"
+                      className="agri-input text-sm"
+                      value={extracted.invoice_date || todayISO()}
+                      onChange={(e) => updateExtractedField("invoice_date", e.target.value)}
+                    />
+                  </div>
                 </div>
 
-                {/* Extracted Line Items */}
+                {/* Extracted Line Items Table */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="font-poppins font-semibold text-slate-800 text-sm">Extracted Line Items ({extracted.items?.length || 0})</h3>
@@ -298,52 +331,55 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
                       <thead className="bg-slate-100 border-b border-slate-200">
                         <tr>
                           <th className="agri-th">#</th>
-                          <th className="agri-th">Product Name</th>
+                          <th className="agri-th">Item Description</th>
                           <th className="agri-th">Batch</th>
                           <th className="agri-th">Expiry</th>
                           <th className="agri-th">Unit</th>
                           <th className="agri-th">Qty</th>
-                          <th className="agri-th">Rate (₹)</th>
-                          <th className="agri-th">Amount (₹)</th>
+                          <th className="agri-th">Unit Price (₹)</th>
+                          <th className="agri-th">Total Amount (₹)</th>
                           <th className="agri-th"></th>
                         </tr>
                       </thead>
                       <tbody>
                         {extracted.items?.map((it, i) => (
-                          <tr key={i} className="border-b border-slate-100 last:border-0">
+                          <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
                             <td className="agri-td text-slate-400">{i + 1}</td>
                             <td className="agri-td">
                               <input
-                                className="w-full border border-slate-200 rounded px-2 py-1"
-                                value={it.product_name}
+                                className="w-full border border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-emerald-500"
+                                value={it.product_name || ""}
                                 onChange={(e) => updateItemField(i, "product_name", e.target.value)}
                               />
                             </td>
                             <td className="agri-td">
                               <input
                                 className="w-24 border border-slate-200 rounded px-2 py-1 font-mono"
-                                value={it.batch_number}
+                                value={it.batch_number || ""}
                                 onChange={(e) => updateItemField(i, "batch_number", e.target.value)}
                               />
                             </td>
                             <td className="agri-td">
                               <input
-                                className="w-24 border border-slate-200 rounded px-2 py-1"
-                                value={it.expiry_date}
+                                type="date"
+                                className="w-28 border border-slate-200 rounded px-2 py-1"
+                                value={it.expiry_date || ""}
                                 onChange={(e) => updateItemField(i, "expiry_date", e.target.value)}
                               />
                             </td>
                             <td className="agri-td">
                               <input
                                 className="w-16 border border-slate-200 rounded px-2 py-1"
-                                value={it.unit}
+                                value={it.unit || "Unit"}
                                 onChange={(e) => updateItemField(i, "unit", e.target.value)}
                               />
                             </td>
                             <td className="agri-td">
                               <input
                                 type="number"
-                                className="w-16 border border-slate-200 rounded px-2 py-1"
+                                min="0"
+                                step="any"
+                                className="w-20 border border-slate-200 rounded px-2 py-1 font-semibold"
                                 value={it.qty}
                                 onChange={(e) => updateItemField(i, "qty", Number(e.target.value))}
                               />
@@ -351,16 +387,18 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
                             <td className="agri-td">
                               <input
                                 type="number"
-                                className="w-20 border border-slate-200 rounded px-2 py-1"
+                                min="0"
+                                step="any"
+                                className="w-24 border border-slate-200 rounded px-2 py-1 font-semibold text-right"
                                 value={it.unit_price}
                                 onChange={(e) => updateItemField(i, "unit_price", Number(e.target.value))}
                               />
                             </td>
-                            <td className="agri-td font-semibold text-slate-800">
+                            <td className="agri-td font-semibold text-slate-800 text-right">
                               {fmtCurrency(it.amount || (it.qty * it.unit_price))}
                             </td>
                             <td className="agri-td">
-                              <button type="button" onClick={() => removeItem(i)} className="text-slate-400 hover:text-red-500">
+                              <button type="button" onClick={() => removeItem(i)} className="text-slate-400 hover:text-red-500 p-1">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </td>
@@ -371,22 +409,53 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
                   </div>
                 </div>
 
-                {/* Financial Summary */}
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-4 text-sm">
-                  <div className="space-y-1">
-                    <span className="text-xs text-slate-500">Gross Subtotal: {fmtCurrency(extracted.subtotal)}</span>
-                    <span className="text-xs text-slate-500 block">Total Discounts: -{fmtCurrency(extracted.discount)}</span>
+                {/* Subtotal, Tax, Total Amounts */}
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-4 items-center text-xs">
+                  <div>
+                    <label className="agri-label">Subtotal Amount</label>
+                    <div className="font-semibold text-slate-800 text-sm">{fmtCurrency(extracted.subtotal || 0)}</div>
                   </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-right">
-                      <span className="text-xs text-slate-500">Net Invoice Total</span>
-                      <div className="font-poppins font-bold text-xl text-agri-primary">{fmtCurrency(extracted.total)}</div>
-                    </div>
+                  <div>
+                    <label className="agri-label">CGST Amount (₹)</label>
+                    <input
+                      type="number"
+                      step="any"
+                      className="agri-input text-xs"
+                      value={extracted.cgst || 0}
+                      onChange={(e) => updateExtractedField("cgst", Number(e.target.value))}
+                    />
+                  </div>
+                  <div>
+                    <label className="agri-label">SGST Amount (₹)</label>
+                    <input
+                      type="number"
+                      step="any"
+                      className="agri-input text-xs"
+                      value={extracted.sgst || 0}
+                      onChange={(e) => updateExtractedField("sgst", Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="text-right flex flex-col items-end justify-center">
+                    <span className="text-xs text-slate-500">Total Amount</span>
+                    <div className="font-poppins font-bold text-xl text-agri-primary">{fmtCurrency(extracted.total || 0)}</div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                  <span className="text-xs text-slate-500 flex items-center gap-1">
+                    💡 Tip: Press <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono font-bold">Enter</kbd> to save directly into database.
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <button type="button" onClick={onClose} className="agri-btn-secondary py-2.5 px-4 text-xs">
+                      Cancel
+                    </button>
                     <button
                       type="button"
                       onClick={handleSavePurchase}
                       disabled={saving}
-                      className="agri-btn-primary py-3 px-6 text-sm disabled:opacity-50"
+                      className="agri-btn-primary py-2.5 px-6 text-xs disabled:opacity-50"
+                      data-testid="btn-confirm-scanned-purchase"
                     >
                       {saving ? (
                         <>
@@ -394,7 +463,7 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
                         </>
                       ) : (
                         <>
-                          <Check className="w-4 h-4" /> Confirm & Add Purchase Entry
+                          <Check className="w-4 h-4" /> Confirm & Add to Purchase List
                         </>
                       )}
                     </button>
@@ -408,3 +477,4 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
     </AnimatePresence>
   );
 }
+
