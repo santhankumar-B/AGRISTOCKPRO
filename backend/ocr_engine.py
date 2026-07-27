@@ -2,9 +2,13 @@ import io
 import re
 import cv2
 import hashlib
+import logging
 import numpy as np
 from PIL import Image
 from datetime import datetime
+
+logger = logging.getLogger("agristock.ocr")
+logger.setLevel(logging.INFO)
 
 KNOWN_SUPPLIERS = [
     {"name": "NOVA AGRITECH LIMITED", "gst": "36AACCN8771A2ZH", "phone": "7995084789", "address": "Sy No 251/A, Singannaguda, TG"},
@@ -24,55 +28,84 @@ KNOWN_SUPPLIERS = [
 ]
 
 
-def try_ocr_image(image_bytes: bytes) -> str:
-    """Uses pytesseract if available, otherwise returns empty string."""
-    try:
-        import pytesseract
-        pil_img = Image.open(io.BytesIO(image_bytes)).convert('RGB')
-        text = pytesseract.image_to_string(pil_img)
-        return text
-    except Exception as e:
-        print("Tesseract OCR notice:", e)
-        return ""
+def extract_raw_text(file_bytes: bytes, filename: str = "") -> str:
+    """Extracts text from PDF or Image file payload."""
+    raw_text = ""
+    is_pdf = filename.lower().endswith(".pdf") or file_bytes.startswith(b"%PDF")
+
+    if is_pdf:
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(io.BytesIO(file_bytes))
+            text_pages = []
+            for i, page in enumerate(reader.pages):
+                txt = page.extract_text()
+                if txt:
+                    text_pages.append(txt)
+            raw_text = "\n".join(text_pages)
+            print(f"[OCR Engine] PDF text extracted ({len(raw_text)} chars)")
+        except Exception as e:
+            print(f"[OCR Engine] PyPDF extraction notice: {e}")
+
+    if not raw_text.strip():
+        try:
+            import pytesseract
+            pil_img = Image.open(io.BytesIO(file_bytes)).convert('RGB')
+            raw_text = pytesseract.image_to_string(pil_img)
+            print(f"[OCR Engine] Pytesseract image text extracted ({len(raw_text)} chars)")
+        except Exception as e:
+            print(f"[OCR Engine] Pytesseract notice: {e}")
+
+    return raw_text.strip()
 
 
-def parse_extracted_text(raw_text: str, filename: str = "", image_bytes: bytes = b"") -> dict:
-    """Parses raw text extracted from image/PDF into structured invoice dict."""
+def parse_invoice_text(raw_text: str, filename: str = "", file_bytes: bytes = b"") -> dict:
+    """Parses raw OCR/PDF text into structured invoice fields."""
     filename_upper = filename.upper()
     text_upper = raw_text.upper()
-    image_hash = hashlib.md5(image_bytes).hexdigest() if image_bytes else "00000000"
-    hash_num = int(image_hash[:8], 16)
+    file_hash = hashlib.md5(file_bytes).hexdigest() if file_bytes else "00000000"
+    hash_num = int(file_hash[:8], 16)
 
     # 1. Vendor / Supplier Matching
-    supplier_name = "GHARDA CHEMICALS LIMITED"
-    supplier_gst = "37AAACG1255E1Z0"
+    supplier_name = ""
+    supplier_gst = ""
     supplier_phone = ""
     supplier_address = ""
 
-    # Check known suppliers list
-    matched_supplier = None
+    # Check known suppliers first
     for sup in KNOWN_SUPPLIERS:
-        name_parts = sup["name"].split()[0]
-        if name_parts in filename_upper or name_parts in text_upper:
-            matched_supplier = sup
+        name_part = sup["name"].split()[0]
+        if name_part in filename_upper or name_part in text_upper:
+            supplier_name = sup["name"]
+            supplier_gst = sup["gst"]
+            supplier_phone = sup.get("phone", "")
+            supplier_address = sup.get("address", "")
             break
         if sup["gst"] in text_upper:
-            matched_supplier = sup
+            supplier_name = sup["name"]
+            supplier_gst = sup["gst"]
+            supplier_phone = sup.get("phone", "")
+            supplier_address = sup.get("address", "")
             break
 
-    if matched_supplier:
-        supplier_name = matched_supplier["name"]
-        supplier_gst = matched_supplier["gst"]
-        supplier_phone = matched_supplier.get("phone", "")
-        supplier_address = matched_supplier.get("address", "")
+    # Fallback to GST match if supplier not found in known list
+    if not supplier_name:
+        gst_match = re.search(r'\b[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}\b', text_upper)
+        if gst_match:
+            supplier_gst = gst_match.group(0)
 
-    # Fallback GST regex scan
-    gst_match = re.search(r'\b[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}\b', raw_text)
-    if gst_match and not matched_supplier:
-        supplier_gst = gst_match.group(0)
+        # Look for first line containing LIMITED, PVT, AGRO, AGENCIES, TRADERS, CROP, CHEMICALS
+        lines = [l.strip() for l in raw_text.splitlines() if l.strip()]
+        for line in lines[:8]:
+            if any(k in line.upper() for k in ["LIMITED", "PVT", "AGRO", "AGENCIES", "TRADERS", "CROP", "CHEMICALS", "SOLUTIONS"]):
+                supplier_name = line.strip()
+                break
+
+    if not supplier_name:
+        supplier_name = "New Supplier"
 
     # 2. Invoice Number Extraction
-    inv_num_match = re.search(r'(?:INVOICE|BILL|MEMO)\s*(?:NO|NUMBER|#)?[\s:]*([A-Z0-9/\-_]{4,25})', text_upper)
+    inv_num_match = re.search(r'(?:INVOICE|BILL|MEMO|TAX INVOICE)\s*(?:NO|NUMBER|#)?[\s:]*([A-Z0-9/\-_]{3,30})', text_upper)
     if inv_num_match:
         invoice_number = inv_num_match.group(1).strip()
     else:
@@ -96,20 +129,20 @@ def parse_extracted_text(raw_text: str, filename: str = "", image_bytes: bytes =
     else:
         invoice_date = datetime.now().strftime("%Y-%m-%d")
 
-    # 4. Total & Subtotal Extraction from text if present
+    # 4. Total & Subtotal Extraction
     subtotal = 0.0
     cgst = 0.0
     sgst = 0.0
     total = 0.0
 
-    total_match = re.search(r'(?:TOTAL|AMOUNT CHARGEABLE|GRAND TOTAL)[\s:]*₹?\s*([\d,]+\.?\d*)', text_upper)
+    total_match = re.search(r'(?:TOTAL|AMOUNT CHARGEABLE|GRAND TOTAL|TOTAL INVOICE)[\s:]*₹?\s*([\d,]+\.?\d*)', text_upper)
     if total_match:
         try:
             total = float(total_match.group(1).replace(",", ""))
         except ValueError:
             pass
 
-    subtotal_match = re.search(r'(?:SUBTOTAL|TAXABLE VALUE|VALUE OF SUPPLY)[\s:]*₹?\s*([\d,]+\.?\d*)', text_upper)
+    subtotal_match = re.search(r'(?:SUBTOTAL|TAXABLE VALUE|VALUE OF SUPPLY|BASIC PRICE)[\s:]*₹?\s*([\d,]+\.?\d*)', text_upper)
     if subtotal_match:
         try:
             subtotal = float(subtotal_match.group(1).replace(",", ""))
@@ -130,35 +163,50 @@ def parse_extracted_text(raw_text: str, filename: str = "", image_bytes: bytes =
         except ValueError:
             pass
 
-    # 5. Default line items or parsed line items
-    items = [
-        {
-            "product_name": "Chlorpyrifos 50% + Cypermethrin 5% Ec (HAMLA 550-1 LTR)",
-            "category": "Pesticides",
-            "batch_number": f"HML{hash_num % 1000:03d}",
-            "expiry_date": "2028-04-19",
-            "unit": "Bottle",
-            "qty": 10.0,
-            "unit_price": 581.40,
-            "discount_percent": 0.0,
-            "tax_percent": 18.0,
-            "amount": 5814.00
-        },
-        {
-            "product_name": "NPK 19:19:19 25KG BAG",
-            "category": "Fertilizers",
-            "batch_number": f"NPK{hash_num % 1000:03d}",
-            "expiry_date": "2028-06-20",
-            "unit": "Bag",
-            "qty": 10.0,
-            "unit_price": 1725.00,
-            "discount_percent": 0.0,
-            "tax_percent": 5.0,
-            "amount": 17250.00
-        }
-    ]
+    # 5. Dynamic Line Items Parsing from Text Lines
+    parsed_items = []
+    lines = [l.strip() for l in raw_text.splitlines() if l.strip()]
 
-    calc_subtotal = sum(it["amount"] for it in items)
+    for line in lines:
+        # Match lines with item name and quantities/rates e.g. "NPK 19:19:19 10 Bag 1725 17250"
+        match = re.search(r'^(\d+\s+)?([A-Za-z0-9\s%\-\:\(\)]+?)\s+(\d+(?:\.\d+)?)\s+(Bag|Bottle|Can|Nos|Box|Kg|Ltr|Unit|Pkt|Pack)?\s*₹?\s*([\d,]+(?:\.\d+)?)\s+₹?\s*([\d,]+(?:\.\d+)?)', line, re.IGNORECASE)
+        if match:
+            prod_name = match.group(2).strip()
+            qty = float(match.group(3))
+            unit = match.group(4) or "Unit"
+            rate = float(match.group(5).replace(",", ""))
+            amt = float(match.group(6).replace(",", ""))
+            parsed_items.append({
+                "product_name": prod_name,
+                "category": "General",
+                "batch_number": "",
+                "expiry_date": "",
+                "unit": unit,
+                "qty": qty,
+                "unit_price": rate,
+                "discount_percent": 0.0,
+                "tax_percent": 5.0,
+                "amount": amt,
+            })
+
+    # If no line items extracted, return 1 clean blank item for user entry
+    if not parsed_items:
+        parsed_items = [
+            {
+                "product_name": "",
+                "category": "General",
+                "batch_number": "",
+                "expiry_date": "",
+                "unit": "Unit",
+                "qty": 1.0,
+                "unit_price": 0.0,
+                "discount_percent": 0.0,
+                "tax_percent": 0.0,
+                "amount": 0.0,
+            }
+        ]
+
+    calc_subtotal = sum(it["amount"] for it in parsed_items)
     if subtotal == 0.0:
         subtotal = calc_subtotal
     if total == 0.0:
@@ -171,37 +219,33 @@ def parse_extracted_text(raw_text: str, filename: str = "", image_bytes: bytes =
         "supplier_address": supplier_address,
         "invoice_number": invoice_number,
         "invoice_date": invoice_date,
-        "items": items,
+        "items": parsed_items,
         "subtotal": round(subtotal, 2),
         "discount": 0.00,
         "cgst": round(cgst, 2),
         "sgst": round(sgst, 2),
         "total": round(total, 2),
         "scan_status": "SUCCESS",
-        "image_hash": image_hash[:8]
+        "image_hash": file_hash[:8]
     }
 
 
-def extract_invoice_data(image_bytes: bytes, filename: str = "") -> dict:
+def extract_invoice_data(file_bytes: bytes, filename: str = "") -> dict:
     """
-    100% Standalone OCR Engine for AgriStock Pro.
-    Supports Image/PDF text detection, OpenCV visual analysis, and Regex Extraction.
+    Real file OCR & text parsing controller endpoint.
+    Extracts raw text from image or PDF payload and parses JSON payload for review.
     """
-    num_text_boxes = 0
-    try:
-        pil_img = Image.open(io.BytesIO(image_bytes)).convert('RGB')
-        img_np = np.array(pil_img)
-        gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-        thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 3))
-        detected_lines = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
-        contours, _ = cv2.findContours(detected_lines, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        num_text_boxes = len([c for c in contours if cv2.boundingRect(c)[2] > 30 and cv2.boundingRect(c)[3] > 8])
-    except Exception as e:
-        print("CV Processing notice:", e)
-
-    raw_text = try_ocr_image(image_bytes)
-    result = parse_extracted_text(raw_text, filename=filename, image_bytes=image_bytes)
-    result["detected_regions"] = num_text_boxes
+    print(f"\n==================== [OCR CONTROLLER STEP 1] ====================")
+    print(f"[Backend Controller] Received file payload: filename='{filename}', size={len(file_bytes)} bytes")
+    
+    raw_text = extract_raw_text(file_bytes, filename=filename)
+    print(f"\n==================== [OCR CONTROLLER STEP 2] ====================")
+    print(f"[Raw Output Received from OCR/PDF Engine]:\n{raw_text if raw_text else '(No raw text detected on file)'}")
+    
+    result = parse_invoice_text(raw_text, filename=filename, file_bytes=file_bytes)
+    print(f"\n==================== [OCR CONTROLLER STEP 3] ====================")
+    print(f"[Parsed JSON Sent Back to Frontend]:\n{result}")
+    print(f"=================================================================\n")
+    
     return result
 

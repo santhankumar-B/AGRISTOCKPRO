@@ -572,13 +572,19 @@ async def delete_purchase(pid: str, user=Depends(current_user)):
 
 @api.post("/purchases/scan-invoice")
 async def scan_invoice(file: UploadFile = File(...), user=Depends(current_user)):
-    if not file.content_type.startswith("image/") and not file.filename.endswith((".jpg", ".jpeg", ".png", ".webp", ".pdf")):
+    filename = file.filename or "invoice.file"
+    if not (file.content_type.startswith("image/") or filename.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".pdf"))):
         raise HTTPException(400, "Please upload a valid image file (JPG, PNG, WEBP) or PDF")
 
     contents = await file.read()
+    print(f"\n[API Endpoint /api/purchases/scan-invoice] User '{user['username']}' uploaded file: '{filename}' ({len(contents)} bytes)")
+
     from ocr_engine import extract_invoice_data
-    extracted = extract_invoice_data(contents, file.filename)
+    extracted = extract_invoice_data(contents, filename)
+
+    print(f"[API Endpoint /api/purchases/scan-invoice] Successfully parsed file '{filename}'. Returning extracted payload to frontend form state.\n")
     return {"ok": True, "extracted": extracted}
+
 
 
 # ---------------- Sales ----------------
