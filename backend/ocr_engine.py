@@ -28,6 +28,20 @@ KNOWN_SUPPLIERS = [
 ]
 
 
+def find_tesseract_cmd():
+    import os
+    possible_paths = [
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+        os.path.expanduser(r"~\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"),
+        os.path.expanduser(r"~\AppData\Local\Tesseract-OCR\tesseract.exe"),
+    ]
+    for p in possible_paths:
+        if os.path.exists(p):
+            return p
+    return None
+
+
 def extract_raw_text(file_bytes: bytes, filename: str = "") -> str:
     """Extracts text from PDF or Image file payload."""
     raw_text = ""
@@ -50,6 +64,10 @@ def extract_raw_text(file_bytes: bytes, filename: str = "") -> str:
     if not raw_text.strip():
         try:
             import pytesseract
+            t_cmd = find_tesseract_cmd()
+            if t_cmd:
+                pytesseract.pytesseract.tesseract_cmd = t_cmd
+
             pil_img = Image.open(io.BytesIO(file_bytes)).convert('RGB')
             raw_text = pytesseract.image_to_string(pil_img)
             print(f"[OCR Engine] Pytesseract image text extracted ({len(raw_text)} chars)")
@@ -57,6 +75,7 @@ def extract_raw_text(file_bytes: bytes, filename: str = "") -> str:
             print(f"[OCR Engine] Pytesseract notice: {e}")
 
     return raw_text.strip()
+
 
 
 def parse_invoice_text(raw_text: str, filename: str = "", file_bytes: bytes = b"") -> dict:
@@ -72,10 +91,10 @@ def parse_invoice_text(raw_text: str, filename: str = "", file_bytes: bytes = b"
     supplier_phone = ""
     supplier_address = ""
 
-    # Check known suppliers first
+    # Check known suppliers list first
     for sup in KNOWN_SUPPLIERS:
-        name_part = sup["name"].split()[0]
-        if name_part in filename_upper or name_part in text_upper:
+        name_words = [w for w in sup["name"].split() if len(w) > 3 and w not in ["LIMITED", "PRIVATE", "PVT", "COMPANY"]]
+        if any(w in filename_upper or w in text_upper for w in name_words):
             supplier_name = sup["name"]
             supplier_gst = sup["gst"]
             supplier_phone = sup.get("phone", "")
@@ -89,14 +108,14 @@ def parse_invoice_text(raw_text: str, filename: str = "", file_bytes: bytes = b"
             break
 
     # Fallback to GST match if supplier not found in known list
-    if not supplier_name:
+    if not supplier_gst:
         gst_match = re.search(r'\b[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}\b', text_upper)
         if gst_match:
             supplier_gst = gst_match.group(0)
 
-        # Look for first line containing LIMITED, PVT, AGRO, AGENCIES, TRADERS, CROP, CHEMICALS
+    if not supplier_name:
         lines = [l.strip() for l in raw_text.splitlines() if l.strip()]
-        for line in lines[:8]:
+        for line in lines[:10]:
             if any(k in line.upper() for k in ["LIMITED", "PVT", "AGRO", "AGENCIES", "TRADERS", "CROP", "CHEMICALS", "SOLUTIONS"]):
                 supplier_name = line.strip()
                 break
@@ -105,14 +124,14 @@ def parse_invoice_text(raw_text: str, filename: str = "", file_bytes: bytes = b"
         supplier_name = "New Supplier"
 
     # 2. Invoice Number Extraction
-    inv_num_match = re.search(r'(?:INVOICE|BILL|MEMO|TAX INVOICE)\s*(?:NO|NUMBER|#)?[\s:]*([A-Z0-9/\-_]{3,30})', text_upper)
+    inv_num_match = re.search(r'(?:INVOICE|BILL|MEMO|TAX INVOICE|ACK|IRN)\s*(?:NO|NUMBER|#)?[\s:]*([A-Z0-9/\-_]{3,30})', text_upper)
     if inv_num_match:
         invoice_number = inv_num_match.group(1).strip()
     else:
         invoice_number = f"INV-{hash_num % 100000:05d}"
 
     # 3. Invoice Date Extraction
-    date_match = re.search(r'\b(\d{2}[-/\.]\d{2}[-/\.]\d{2,4}|\d{4}[-/\.]\d{2}[-/\.]\d{2})\b', raw_text)
+    date_match = re.search(r'\b(\d{4}[-/\.]\d{2}[-/\.]\d{2}|\d{2}[-/\.]\d{2}[-/\.]\d{2,4})\b', raw_text)
     if date_match:
         date_str = date_match.group(1).replace(".", "-").replace("/", "-")
         try:
@@ -135,7 +154,7 @@ def parse_invoice_text(raw_text: str, filename: str = "", file_bytes: bytes = b"
     sgst = 0.0
     total = 0.0
 
-    total_match = re.search(r'(?:TOTAL|AMOUNT CHARGEABLE|GRAND TOTAL|TOTAL INVOICE)[\s:]*₹?\s*([\d,]+\.?\d*)', text_upper)
+    total_match = re.search(r'(?:NET VALUE|NET AMOUNT|TOTAL VALUE|GRAND TOTAL|TOTAL INVOICE|AMOUNT CHARGEABLE)[\s:]*₹?\s*([\d,]+\.?\d*)', text_upper)
     if total_match:
         try:
             total = float(total_match.group(1).replace(",", ""))
@@ -163,33 +182,80 @@ def parse_invoice_text(raw_text: str, filename: str = "", file_bytes: bytes = b"
         except ValueError:
             pass
 
-    # 5. Dynamic Line Items Parsing from Text Lines
+    # 5. Multi-line Line Item Extraction
     parsed_items = []
     lines = [l.strip() for l in raw_text.splitlines() if l.strip()]
 
-    for line in lines:
-        # Match lines with item name and quantities/rates e.g. "NPK 19:19:19 10 Bag 1725 17250"
-        match = re.search(r'^(\d+\s+)?([A-Za-z0-9\s%\-\:\(\)]+?)\s+(\d+(?:\.\d+)?)\s+(Bag|Bottle|Can|Nos|Box|Kg|Ltr|Unit|Pkt|Pack)?\s*₹?\s*([\d,]+(?:\.\d+)?)\s+₹?\s*([\d,]+(?:\.\d+)?)', line, re.IGNORECASE)
-        if match:
-            prod_name = match.group(2).strip()
-            qty = float(match.group(3))
-            unit = match.group(4) or "Unit"
-            rate = float(match.group(5).replace(",", ""))
-            amt = float(match.group(6).replace(",", ""))
-            parsed_items.append({
-                "product_name": prod_name,
-                "category": "General",
-                "batch_number": "",
-                "expiry_date": "",
-                "unit": unit,
-                "qty": qty,
-                "unit_price": rate,
-                "discount_percent": 0.0,
-                "tax_percent": 5.0,
-                "amount": amt,
-            })
+    current_item = {}
+    for i, line in enumerate(lines):
+        line_u = line.upper()
 
-    # If no line items extracted, return 1 clean blank item for user entry
+        # Check for Product Name keywords e.g. "LIQUID BIONEMATON" or "HAMLA" or "NPK"
+        if any(k in line_u for k in ["LIQUID", "BIONEMATON", "HAMLA", "CHLORPYRIFOS", "CYPERMETHRIN", "NPK", "SEED", "PESTICIDE", "FERTILIZER", "HERBICIDE"]):
+            if not any(noise in line_u for noise in ["SEALER IN", "DEALER IN", "LICENCE", "LICENSE", "FE LNO", "PEST LNO", "SEED LNO"]):
+                if current_item and current_item.get("product_name"):
+                    parsed_items.append(current_item)
+                    current_item = {}
+                current_item["product_name"] = line.strip()
+                current_item["category"] = "General"
+                current_item["unit"] = "Unit"
+                current_item["qty"] = 1.0
+                current_item["unit_price"] = 0.0
+                current_item["amount"] = 0.0
+                current_item["batch_number"] = ""
+                current_item["expiry_date"] = ""
+
+
+        # Extract Batch / Expiry line e.g. "Batcho\Exp : BNOG2604\26-Jun-2027"
+        if "BATCH" in line_u or "EXP" in line_u or "B.NO" in line_u:
+            batch_m = re.search(r'(?:BATCH|B\.NO|BN|EXP)?[\s:\\]*([A-Z0-9]{4,15})', line_u)
+            if batch_m:
+                current_item["batch_number"] = batch_m.group(1).strip()
+            exp_m = re.search(r'(\d{2}[-/\.][A-Za-z0-9]{3}[-/\.]\d{2,4}|\d{2}[-/\.]\d{2}[-/\.]\d{2,4})', line)
+            if exp_m:
+                current_item["expiry_date"] = exp_m.group(1).strip()
+
+        # Extract Qty, Rate, Amount line e.g. "40.000 360.000 14400.00"
+        nums = re.findall(r'\b\d+(?:\.\d+)?\b', line)
+        if len(nums) >= 3 and current_item:
+            try:
+                q = float(nums[0])
+                r = float(nums[1])
+                a = float(nums[2])
+                if q > 0 and r > 0 and a >= (q * r * 0.8):
+                    current_item["qty"] = q
+                    current_item["unit_price"] = r
+                    current_item["amount"] = a
+            except Exception:
+                pass
+
+    if current_item and current_item.get("product_name"):
+        parsed_items.append(current_item)
+
+    # Single-line regex backup parser
+    if not parsed_items:
+        for line in lines:
+            match = re.search(r'^(\d+\s+)?([A-Za-z0-9\s%\-\:\(\)]+?)\s+(\d+(?:\.\d+)?)\s+(Bag|Bottle|Can|Nos|Box|Kg|Ltr|Unit|Pkt|Pack)?\s*₹?\s*([\d,]+(?:\.\d+)?)\s+₹?\s*([\d,]+(?:\.\d+)?)', line, re.IGNORECASE)
+            if match:
+                prod_name = match.group(2).strip()
+                qty = float(match.group(3))
+                unit = match.group(4) or "Unit"
+                rate = float(match.group(5).replace(",", ""))
+                amt = float(match.group(6).replace(",", ""))
+                parsed_items.append({
+                    "product_name": prod_name,
+                    "category": "General",
+                    "batch_number": "",
+                    "expiry_date": "",
+                    "unit": unit,
+                    "qty": qty,
+                    "unit_price": rate,
+                    "discount_percent": 0.0,
+                    "tax_percent": 5.0,
+                    "amount": amt,
+                })
+
+    # Default 1 editable item if no text lines matched
     if not parsed_items:
         parsed_items = [
             {
@@ -206,7 +272,7 @@ def parse_invoice_text(raw_text: str, filename: str = "", file_bytes: bytes = b"
             }
         ]
 
-    calc_subtotal = sum(it["amount"] for it in parsed_items)
+    calc_subtotal = sum(it.get("amount", 0) for it in parsed_items)
     if subtotal == 0.0:
         subtotal = calc_subtotal
     if total == 0.0:
@@ -228,6 +294,7 @@ def parse_invoice_text(raw_text: str, filename: str = "", file_bytes: bytes = b"
         "scan_status": "SUCCESS",
         "image_hash": file_hash[:8]
     }
+
 
 
 def extract_invoice_data(file_bytes: bytes, filename: str = "") -> dict:
