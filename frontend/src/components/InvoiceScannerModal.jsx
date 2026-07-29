@@ -276,17 +276,26 @@ export default function InvoiceScannerModal({ isOpen, onClose, onSuccess }) {
             ) : (
               /* Review & Edit Extracted Data */
               <div className="space-y-6">
-                <div className="bg-lime-50 border border-lime-200 rounded-2xl p-4 flex items-center justify-between">
+                <div className="bg-gradient-to-r from-emerald-50 to-lime-50 border border-emerald-200 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
                   <div className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-green-600" />
-                    <span className="text-sm font-medium text-slate-800">
-                      Data Extracted! Review/edit below. Press <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded text-xs font-mono font-bold text-slate-700 shadow-sm">Enter ↵</kbd> or click button to save to purchase list.
-                    </span>
+                    <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-md">
+                      🤖 AI
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-emerald-950 font-poppins">CrewAI Multi-Agent Extraction Complete</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-semibold uppercase tracking-wider">Verified Agentic</span>
+                      </div>
+                      <p className="text-xs text-emerald-800 mt-0.5">
+                        <strong className="font-semibold text-emerald-900">Agents Used:</strong> Invoice Reader Agent + Accounting Auditor Agent | Review extracted fields below or press <kbd className="px-1 py-0.5 bg-white border border-emerald-300 rounded text-[11px] font-mono font-bold text-slate-700">Enter ↵</kbd> to confirm.
+                      </p>
+                    </div>
                   </div>
-                  <button type="button" onClick={() => setExtracted(null)} className="text-xs text-slate-500 hover:text-slate-700 underline">
-                    Re-scan Another Bill
+                  <button type="button" onClick={() => setExtracted(null)} className="text-xs font-semibold text-emerald-700 hover:text-emerald-900 underline shrink-0">
+                    📸 Scan Another Bill
                   </button>
                 </div>
+
 
                 {/* Supplier & Invoice Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">

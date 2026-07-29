@@ -299,8 +299,8 @@ def parse_invoice_text(raw_text: str, filename: str = "", file_bytes: bytes = b"
 
 def extract_invoice_data(file_bytes: bytes, filename: str = "") -> dict:
     """
-    Real file OCR & text parsing controller endpoint.
-    Extracts raw text from image or PDF payload and parses JSON payload for review.
+    Real file OCR & CrewAI Multi-Agent parsing controller endpoint.
+    Extracts raw text from image or PDF payload and runs CrewAI agents to audit JSON payload.
     """
     print(f"\n==================== [OCR CONTROLLER STEP 1] ====================")
     print(f"[Backend Controller] Received file payload: filename='{filename}', size={len(file_bytes)} bytes")
@@ -309,10 +309,16 @@ def extract_invoice_data(file_bytes: bytes, filename: str = "") -> dict:
     print(f"\n==================== [OCR CONTROLLER STEP 2] ====================")
     print(f"[Raw Output Received from OCR/PDF Engine]:\n{raw_text if raw_text else '(No raw text detected on file)'}")
     
-    result = parse_invoice_text(raw_text, filename=filename, file_bytes=file_bytes)
+    base_result = parse_invoice_text(raw_text, filename=filename, file_bytes=file_bytes)
+    
+    # Run CrewAI Multi-Agent Extraction & Audit Crew
+    from crewai_engine import run_crew_invoice_scan
+    final_result = run_crew_invoice_scan(raw_text, filename=filename, parsed_base=base_result)
+
     print(f"\n==================== [OCR CONTROLLER STEP 3] ====================")
-    print(f"[Parsed JSON Sent Back to Frontend]:\n{result}")
+    print(f"[CrewAI Agent Parsed JSON Sent Back to Frontend]:\n{final_result}")
     print(f"=================================================================\n")
     
-    return result
+    return final_result
+
 
