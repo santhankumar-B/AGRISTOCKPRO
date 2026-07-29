@@ -29,8 +29,8 @@ class CrewAIExtractor:
     def execute_crew(self, raw_text: str, filename: str = "", parsed_base: dict = None) -> dict:
         """Runs the multi-agent Crew pipeline on extracted invoice text."""
         print(f"\n==================== [CREWAI MULTI-AGENT EXECUTION] ====================")
-        print(f"🤖 [Agent 1: {self.reader_agent['name']}] Reading invoice document structure...")
-        print(f"🤖 [Agent 2: {self.auditor_agent['name']}] Auditing extracted line items and financial totals...")
+        print(f"[AI Agent 1: {self.reader_agent['name']}] Reading invoice document structure...")
+        print(f"[AI Agent 2: {self.auditor_agent['name']}] Auditing extracted line items and financial totals...")
 
         result = dict(parsed_base or {})
         
@@ -75,12 +75,16 @@ class CrewAIExtractor:
         disc = float(result.get("discount") or 0.0)
         result["total"] = round(max(0.0, subtotal + cgst + sgst - disc), 2)
 
-        print(f"🤖 [CrewAI Output Summary] Extracted Supplier: '{result.get('supplier_name')}', Items: {len(audited_items)}, Net Total: ₹{result.get('total')}")
+        print(f"[CrewAI Output Summary] Extracted Supplier: '{result.get('supplier_name')}', Items: {len(audited_items)}, Net Total: Rs.{result.get('total')}")
         print(f"========================================================================\n")
 
         return result
 
 
 def run_crew_invoice_scan(raw_text: str, filename: str = "", parsed_base: dict = None) -> dict:
-    crew = CrewAIExtractor()
-    return crew.execute_crew(raw_text, filename, parsed_base)
+    try:
+        crew = CrewAIExtractor()
+        return crew.execute_crew(raw_text, filename, parsed_base)
+    except Exception as e:
+        print("[CrewAI Engine Warning] Notice during agentic execution:", e)
+        return parsed_base or {}
